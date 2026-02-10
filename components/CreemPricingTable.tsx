@@ -4,7 +4,7 @@
 
 import { addPropertyControls, ControlType } from "framer"
 import { useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 interface Tier {
     name: string
@@ -126,7 +126,7 @@ export default function CreemPricingTable(props: Props) {
             productIdMonthly: tierProps.tier2ProductIdMonthly || "",
             productIdYearly: tierProps.tier2ProductIdYearly || "",
             features: tierProps.tier2Features || "10 projects\nAdvanced analytics\nPriority support\n25GB storage\nAPI access",
-            popular: tierProps.tier2Popular ?? true,
+            popular: tierProps.tier2Popular == null ? true : Boolean(tierProps.tier2Popular),
             icon: tierProps.tier2Icon || "🚀",
             ctaText: tierProps.tier2Cta || "Get Started",
         },
@@ -149,8 +149,13 @@ export default function CreemPricingTable(props: Props) {
     const handleCheckout = (tier: Tier) => {
         const productId = billing === "monthly" ? tier.productIdMonthly : tier.productIdYearly
         if (!productId) return
-        window.open(`https://www.creem.io/payment/${productId}`, "_self")
+        const params = new URLSearchParams()
+        if (testMode) params.set("mode", "test")
+        const qs = params.toString()
+        window.open(`https://creem.io/payment/${productId}${qs ? `?${qs}` : ""}`, "_self")
     }
+
+    const popularBtnId = `creem-popular-btn-${Math.random().toString(36).slice(2, 8)}`
 
     return (
         <div style={{
@@ -162,6 +167,13 @@ export default function CreemPricingTable(props: Props) {
             width: "100%",
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         }}>
+            <style>{`
+                .creem-btn-popular {
+                    background: linear-gradient(135deg, ${accentColor}, ${accentColor}cc) !important;
+                    color: #fff !important;
+                    border: none !important;
+                }
+            `}</style>
             {/* Billing Toggle */}
             {showToggle && (
                 <div style={{
@@ -270,21 +282,12 @@ export default function CreemPricingTable(props: Props) {
                             {/* Price */}
                             <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
                                 <span style={{ color: "#555", fontSize: 18, fontWeight: 500 }}>$</span>
-                                <AnimatePresence mode="wait">
-                                    <motion.span
-                                        key={price}
-                                        initial={{ y: 10, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        exit={{ y: -10, opacity: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                        style={{
-                                            color: textColor, fontSize: 42, fontWeight: 800,
-                                            letterSpacing: "-0.03em", lineHeight: 1,
-                                        }}
-                                    >
-                                        {price}
-                                    </motion.span>
-                                </AnimatePresence>
+                                <span style={{
+                                    color: textColor, fontSize: 42, fontWeight: 800,
+                                    letterSpacing: "-0.03em", lineHeight: 1,
+                                }}>
+                                    {price}
+                                </span>
                                 <span style={{ color: "#444", fontSize: 13, marginLeft: 2 }}>/mo</span>
                             </div>
 
@@ -311,17 +314,18 @@ export default function CreemPricingTable(props: Props) {
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => handleCheckout(tier)}
+                                className={tier.popular ? "creem-btn-popular" : ""}
                                 style={{
                                     width: "100%", padding: "13px 0",
                                     borderRadius: rounded ? 999 : 10,
-                                    border: isPopular ? "none" : `1.5px solid ${isHovered ? accentColor : accentColor + "30"}`,
-                                    background: isPopular
+                                    border: tier.popular ? "none" : `1.5px solid ${isHovered ? accentColor : accentColor + "30"}`,
+                                    background: tier.popular
                                         ? `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`
                                         : (isHovered ? `${accentColor}10` : "transparent"),
-                                    color: isPopular ? "#fff" : accentColor,
+                                    color: tier.popular ? "#fff" : accentColor,
                                     fontSize: 14, fontWeight: 600, cursor: "pointer",
                                     fontFamily: "inherit",
-                                    boxShadow: isPopular && isHovered ? `0 8px 24px ${accentColor}40` : "none",
+                                    boxShadow: tier.popular && isHovered ? `0 8px 24px ${accentColor}40` : "none",
                                     letterSpacing: "-0.01em",
                                     transition: "background 0.3s, border-color 0.3s, box-shadow 0.3s",
                                 }}
@@ -341,7 +345,7 @@ CreemPricingTable.defaultProps = {
     textColor: "#FFFFFF",
     cardBackground: "#111111",
     borderColor: "#1a1a1a",
-    columns: "3",
+    columns: "3" as const,
     rounded: true,
     glowEffect: true,
     showBadge: true,

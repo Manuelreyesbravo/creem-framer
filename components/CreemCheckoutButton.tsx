@@ -73,6 +73,7 @@ export default function CreemCheckoutButton(props: Props) {
 
     const [hovered, setHovered] = useState(false)
     const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null)
+    const [showError, setShowError] = useState(false)
     const btnRef = useRef<HTMLDivElement>(null)
 
     const s = SIZES[size] || SIZES.medium
@@ -124,9 +125,16 @@ export default function CreemCheckoutButton(props: Props) {
         }
 
         // Checkout redirect
-        if (!productId) return
-        const baseUrl = testMode ? "https://test-api.creem.io" : "https://api.creem.io"
-        const checkoutUrl = `https://www.creem.io/payment/${productId}`
+        if (!productId) {
+            setShowError(true)
+            setTimeout(() => setShowError(false), 2000)
+            return
+        }
+        const params = new URLSearchParams()
+        if (successUrl) params.set("success_url", successUrl)
+        if (testMode) params.set("mode", "test")
+        const qs = params.toString()
+        const checkoutUrl = `https://creem.io/payment/${productId}${qs ? `?${qs}` : ""}`
         window.open(checkoutUrl, "_self")
     }
 
@@ -202,8 +210,8 @@ export default function CreemCheckoutButton(props: Props) {
             )}
 
             {showIcon && <ShoppingIcon size={s.icon} />}
-            <span style={{ position: "relative", zIndex: 1 }}>{text}</span>
-            {showArrow && <ArrowIcon hovered={hovered} />}
+            <span style={{ position: "relative", zIndex: 1 }}>{showError ? "Set Product ID →" : text}</span>
+            {showArrow && !showError && <ArrowIcon hovered={hovered} />}
         </motion.div>
     )
 }
